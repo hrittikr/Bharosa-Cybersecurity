@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bharosa: Pay se pehle, scam pakdo</title>
+<link rel="stylesheet" href="styles.css">
+</head><body><div class="w">
+<header><svg width="46" height="46" viewBox="0 0 24 24" aria-hidden="true"><path fill="#2ec4a6" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/><path fill="#0b3c49" d="m10.5 15.5-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4z"/></svg>
+<div class="header-copy"><b>Bharosa</b><i>Pay se pehle, scam pakdo.</i><p>AI shield that checks a payment for scams before you pay. Prototype demo.</p></div>
+<button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch color theme" title="Switch theme">🌙</button></header>
+<nav id="nv"><button class="on" data-t="t1">Check</button><button data-t="t2">Live Call Shield</button><button data-t="t3">Pay + Guardian</button><button data-t="t4">Merchant Shield</button></nav>
+
+<section id="t1"><div class="c"><h2>Check a message, link or UPI ID</h2><p class="m">Paste anything suspicious. Bharosa scores the risk and explains why, in Hinglish.</p>
+<div class="ch" id="s1"></div><textarea id="in" placeholder="SMS, WhatsApp message, link, UPI ID…"></textarea>
+<button class="b" id="go">Check risk</button><button class="b g" id="rp" hidden>Report to Scam Radar</button><div id="o1"></div></div>
+<div class="c"><h2>Scam Radar</h2><p class="m">Reported scam IDs and links. Sample data plus your own reports (saved in this browser).</p><table id="rd"></table></div></section>
+
+<section id="t2" hidden><div class="c"><h2>Live Call Shield</h2><p class="m">Bharosa listens to the call and warns while it happens. Use the mic (Hindi) or play a sample scam call.</p>
+<div id="al"></div><textarea id="tr" placeholder="Call transcript appears here…"></textarea>
+<button class="b" id="sim">Play sample scam call</button><button class="b g" id="mic">Use mic (Hindi)</button><button class="b g" id="clr">Clear</button><p class="m" id="mn"></p><div id="o2"></div></div></section>
+
+<section id="t3" hidden><div class="c"><h2>Pay with Family Guardian</h2><p class="m">Risky or large payments pause and ask a trusted family member first.</p>
+<div class="ch"><button id="ex">Fill risky example</button></div>
+<label>Pay to (UPI ID)<input id="pp" placeholder="name@bank"></label><label>Amount (₹)<input id="pa" type="number" placeholder="500"></label>
+<label>Note<input id="pn" placeholder="What is this for?"></label><label>Guardian limit (₹)<input id="gt" type="number" value="5000"></label>
+<button class="b" id="pay">Pay now</button><div id="o3"></div></div></section>
+
+<section id="t4" hidden><div class="c"><h2>Merchant Shield</h2><p class="m">Check a customer’s “payment done” screenshot. Enter what the screenshot shows. (Automatic screenshot reading is planned.)</p>
+<label>Amount you expected (₹)<input id="ma" type="number"></label><label>Amount on screenshot (₹)<input id="ms" type="number"></label>
+<label>UTR / reference number<input id="mu" placeholder="12 digits"></label><label>Minutes since screenshot time<input id="mt" type="number" value="1"></label>
+<label>Did your bank app or SMS show the credit?<select id="mb"><option value="y">Yes, I see the credit</option><option value="n">No, nothing yet</option></select></label>
+<button class="b" id="mc">Check screenshot</button><button class="b g" id="mx">Fill fake example</button><div id="o4"></div></div></section>
+<p class="m">Prototype: detection here is rule-based and runs in your browser. The full build adds LLM reasoning, OCR and speech-to-text. Sample scam IDs are fictional demo data.</p></div>
+<script>
+const $=s=>document.querySelector(s),E=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const themeToggle=$("#themeToggle");
+const savedTheme=localStorage.getItem("bharosa-theme");
+if(savedTheme)document.documentElement.dataset.theme=savedTheme;
+const syncTheme=()=>{const dark=document.documentElement.dataset.theme==="dark";themeToggle.textContent=dark?"☀️":"🌙";themeToggle.setAttribute("aria-label",dark?"Switch to light theme":"Switch to dark theme")};
+syncTheme();
+themeToggle.onclick=()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=next;localStorage.setItem("bharosa-theme",next);syncTheme()};
+const SEED={"cbi.officer@ybl":31,"kyc.update@fakebank":18,"lucky.winner@paytm":9,"sbi-kyc-update.xyz":22};
+let mine={};try{mine=JSON.parse(localStorage.getItem("bharosa-radar")||"{}")}catch(e){}
+const cnt=k=>(SEED[k]||0)+(mine[k]||0);
+const RULES=[
+[/urgent|immediately|turant|abhi|last chance|within \d+ ?(hours?|hrs|minutes?)|24 hours|expire|block ho|band ho/i,15,"Jaldi karne ka dabav (urgency) bana raha hai"],
+[/\bcbi\b|police|arrest|customs|narcotics|court|warrant|cyber ?cell|\btrai\b/i,30,"Police/CBI jaisi authority ka naam leke dara raha hai"],
+[/\botp\b|upi pin|\bpin\b|cvv|password/i,30,"OTP/PIN/password maang raha hai. Ye kabhi share mat karo"],
+[/send money|paise bhej|bhejo|transfer|pay now|collect request|accept (the )?request|deposit/i,20,"Paise bhejne ko keh raha hai"],
+[/kyc|account (will be )?(block|suspend)|pan card|aadhaar|sim (block|band)/i,20,"Fake KYC / account block wala purana scam pattern hai"],
+[/lottery|lucky|winner|jeet|prize|reward|cashback|free gift/i,22,"Inaam ya lottery ka lalach de raha hai"],
+[/anydesk|teamviewer|quicksupport|screen ?share/i,35,"Screen-share app install karwa raha hai"],
+[/refund|wrongly (sent|transferred)|galti se/i,15,"Refund ya galat transfer ka bahana"]];
+function analyze(t){let s=0,h=[],ids=[],keys=[];
+RULES.forEach(([re,w,m])=>{if(re.test(t)){s+=w;h.push(m)}});
+(t.match(/[\w.\-]{2,}@[a-z]{2,}/gi)||[]).forEach(i=>{i=i.toLowerCase();ids.push(i);keys.push(i);if(cnt(i)){s+=40;h.push("Scam Radar: "+cnt(i)+" logon ne "+E(i)+" ko report kiya hai")}});
+(t.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/gi)||[]).forEach(u=>{
+ const d=u.replace(/^https?:\/\//i,"").split(/[\/?#]/)[0].toLowerCase();if(ids.some(i=>i.split("@")[1]&&d===i.split("@")[1]))return;
+ if(/^(paytm\.com|sbi\.co\.in|npci\.org\.in|google\.com)$/.test(d))return;keys.push(d);let x=0;
+ if(/^(bit\.ly|tinyurl\.com|cutt\.ly|t\.co|rb\.gy)$/.test(d)){x+=25;h.push("Short link ke peeche asli site chhupi hai")}
+ if(/\.(xyz|top|click|live|icu|site|online|buzz|cfd)$/.test(d)){x+=25;h.push("Link ka domain shak wala hai ("+E(d)+")")}
+ if(/^http:\/\//i.test(u)){x+=10;h.push("Link secure (https) nahi hai")}
+ if(/(paytm|sbi|hdfc|icici|phonepe|gpay|npci|upi|bank)[a-z0-9]*[-.](kyc|secure|verify|update|login|refund|support)|(kyc|secure|verify)-(paytm|sbi|hdfc|icici|upi|bank)/.test(d)){x+=30;h.push("Asli bank/app jaisa dikhne wala nakli domain")}
+ if(cnt(d)){x+=40;h.push("Scam Radar: "+cnt(d)+" logon ne "+E(d)+" ko report kiya hai")}s+=x});
+return{s:Math.min(100,s),h:[...new Set(h)],keys:[...new Set(keys)]}}
+const lv=s=>s>=70?["high","Khatra: block karo","Ye scam lagta hai. Payment mat karo aur report karo."]:s>=40?["mid","Savdhan: ruko aur verify karo","Asli number ya bank app se pehle verify karo."]:["low","Abhi safe lagta hai","Bada red flag nahi mila. Phir bhi OTP ya PIN kisi ko mat do."];
+function show(el,r){const[k,t,a]=lv(r.s);el.innerHTML='<div class="res '+k+'"><span class="p">'+t+'</span> <b>'+r.s+'/100</b><div class="bar"><i style="width:'+r.s+'%"></i></div><ul>'+(r.h.length?r.h.map(x=>"<li>"+x+"</li>").join(""):"<li>Koi scam signal nahi mila</li>")+"</ul><p><b>Ab kya karein:</b> "+a+"</p></div>"}
+// tabs
+document.querySelectorAll("#nv button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#nv button").forEach(x=>x.classList.toggle("on",x===b));["t1","t2","t3","t4"].forEach(i=>$("#"+i).hidden=i!==b.dataset.t)});
+// check tab
+const SM=[["Digital arrest","Main CBI officer bol raha hu. Aapke naam pe parcel me drugs mila hai, aap digital arrest me ho. Case close karne ke liye abhi ₹50,000 bhejo cbi.officer@ybl warna arrest ho jaoge."],
+["Fake KYC","Dear customer, aapka SBI account 24 hours me block ho jayega. KYC update karne ke liye click karein: http://sbi-kyc-update.xyz/login"],
+["Lottery","Congratulations! Aap lucky winner ho, ₹25 lakh prize jeeta. Claim karne ke liye bit.ly/claim-now par apna UPI PIN daalo."],
+["Safe message","Hi, kal ke lunch ka ₹250 bill bhej diya hai, jab time mile to bhej dena. Thanks!"]];
+SM.forEach(([n,t])=>{const b=document.createElement("button");b.textContent=n;b.onclick=()=>{$("#in").value=t;$("#go").click()};$("#s1").appendChild(b)});
+let last=null;
+function radar(){const k=[...new Set([...Object.keys(SEED),...Object.keys(mine)])].sort((a,b)=>cnt(b)-cnt(a));$("#rd").innerHTML=k.map(x=>"<tr><td>"+E(x)+"</td><td align=right><b>"+cnt(x)+"</b> reports</td></tr>").join("")}
+$("#go").onclick=()=>{const t=$("#in").value.trim();if(!t){$("#o1").textContent="Pehle kuch likho ya sample chuno.";return}last=analyze(t);show($("#o1"),last);$("#rp").hidden=!last.keys.length||last.s<40;$("#rp").textContent="Report to Scam Radar"};
+$("#rp").onclick=()=>{if(!last)return;last.keys.forEach(k=>mine[k]=(mine[k]||0)+1);try{localStorage.setItem("bharosa-radar",JSON.stringify(mine))}catch(e){}radar();$("#rp").textContent="Reported. Dhanyavaad!"};
+radar();
+// call shield
+function live(){const t=$("#tr").value;if(!t.trim()){$("#o2").innerHTML="";$("#al").innerHTML="";return}const r=analyze(t);show($("#o2"),r);$("#al").innerHTML=r.s>=70?'<div class="al">⚠️ SCAM ALERT: Call kaat do. Police ya CBI phone pe paise nahi maangti.</div>':""}
+$("#tr").oninput=live;let tm;
+$("#sim").onclick=()=>{clearInterval(tm);$("#tr").value="";const L=["Hello, main Mumbai cyber cell se bol raha hu.","Aapke Aadhaar se ek parcel pakda gaya hai jisme drugs hain.","Aap digital arrest me hain, kisi ko mat batana.","Case close karne ke liye abhi ₹50,000 transfer karo, nahi to arrest ho jaoge.","Apna UPI PIN aur OTP bolo, verify karna hai."];let i=0;tm=setInterval(()=>{$("#tr").value+=(i?" ":"")+L[i++];live();if(i>=L.length)clearInterval(tm)},1500)};
+$("#clr").onclick=()=>{clearInterval(tm);$("#tr").value="";live()};
+$("#mic").onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$("#mn").textContent="Is browser me mic recognition nahi hai. Sample call chalao.";return}
+ try{const r=new SR();r.lang="hi-IN";r.continuous=true;r.interimResults=false;r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)$("#tr").value+=" "+e.results[i][0].transcript;live()};r.onerror=()=>{$("#mn").textContent="Mic allow nahi hua. Sample call chalao."};r.start();$("#mn").textContent="Sun raha hu… bolo."}catch(e){$("#mn").textContent="Mic start nahi hua."}};
+// pay + guardian
+$("#ex").onclick=()=>{$("#pp").value="cbi.officer@ybl";$("#pa").value=50000;$("#pn").value="case close karne ke liye, urgent"};
+$("#pay").onclick=()=>{const p=$("#pp").value.trim(),a=+$("#pa").value,g=+$("#gt").value||5000,o=$("#o3");if(!p||!a){o.textContent="UPI ID aur amount daalo.";return}
+ const r=analyze(p+" "+$("#pn").value);const big=a>g;
+ if(r.s>=70||big){o.innerHTML='<div class="ph"><b>⏸️ Payment roka gaya</b><p class="m">'+(r.s>=70?"Risk "+r.s+"/100: scam signals mile.":"Amount ₹"+a+" Guardian limit (₹"+g+") se zyada hai.")+'</p><div class="ph"><b>📱 Family Guardian ko alert gaya</b><p>Papa ₹'+a+' bhej rahe hain <b>'+E(p)+'</b> ko. Risk: '+r.s+'/100.</p><button class="b" id="ap">Approve</button><button class="b g" id="rj">Reject</button><p id="gr"></p></div></div>';
+  $("#ap").onclick=()=>$("#gr").textContent="Guardian ne approve kiya. Payment bhej diya (demo).";$("#rj").onclick=()=>$("#gr").textContent="Guardian ne reject kiya. Payment cancel ho gaya."}
+ else{o.innerHTML='<div class="ph"><b>✅ Payment bhej diya (demo)</b><p class="m">Risk '+r.s+'/100, limit ke andar.</p></div>'}};
+// merchant
+$("#mx").onclick=()=>{$("#ma").value=1500;$("#ms").value=1500;$("#mu").value="4021";$("#mt").value=45;$("#mb").value="n"};
+$("#mc").onclick=()=>{let s=0,h=[];const e=+$("#ma").value,a=+$("#ms").value,u=$("#mu").value.trim(),m=+$("#mt").value;
+ if(!/^\d{12}$/.test(u)){s+=25;h.push("UTR 12 digit ka hona chahiye, ye nahi hai")}
+ if(e&&a&&e!==a){s+=30;h.push("Screenshot ka amount aapke amount se alag hai")}
+ if(m>10){s+=20;h.push("Screenshot purana hai ("+m+" minute)")}
+ if($("#mb").value==="n"){s+=60;h.push("Bank app ya SMS me credit nahi dikha, paisa aaya hi nahi")}
+ const r={s:Math.min(100,s),h};show($("#o4"),r);$("#o4").insertAdjacentHTML("beforeend",'<p class="m">Rule: screenshot nahi, apne bank app ka credit dekho.</p>')};
+</script></body></html>
